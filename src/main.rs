@@ -6,12 +6,16 @@ struct Person;
 #[derive(Component)]
 struct Name(String);
 
+#[derive(Resource)]
+struct GreetTimer(Timer);
+
 pub struct HelloPlugin;
 
 impl Plugin for HelloPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, add_people)
-            .add_systems(Update, (hello_world, (update_people, greet_people).chain()));
+        app.insert_resource(GreetTimer(Timer::from_seconds(2.0, TimerMode::Repeating)))
+            .add_systems(Startup, add_people)
+            .add_systems(Update, (hello_world, (greet_people).chain()));
     }
 }
 
@@ -25,7 +29,14 @@ fn hello_world() {
     println!("hellow roldd2");
 }
 
-fn update_people(mut query: Query<&mut Name, With<Person>>) {
+fn update_people(
+    time: Res<Time>,
+    mut timer: ResMut<GreetTimer>,
+    mut query: Query<&mut Name, With<Person>>,
+) {
+    if !timer.0.tick(time.delta()).just_finished() {
+        return;
+    }
     query.iter_mut().for_each(|mut name| {
         if name.0 == "Elaina Proctor" {
             name.0 = "Elaina Sigma".to_string();
